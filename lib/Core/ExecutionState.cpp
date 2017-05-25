@@ -70,6 +70,7 @@ ExecutionState::ExecutionState(KFunction *kf) :
     pc(kf->instructions),
     prevPC(pc),
 
+    bitflip(false),
     queryCost(0.), 
     weight(1),
     depth(0),
@@ -107,6 +108,7 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     addressSpace(state.addressSpace),
     constraints(state.constraints),
 
+    bitflip(state.bitflip),
     queryCost(state.queryCost),
     weight(state.weight),
     depth(state.depth),

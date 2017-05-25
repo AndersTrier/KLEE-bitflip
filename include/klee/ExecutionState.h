@@ -97,6 +97,9 @@ public:
   /// @brief Constraints collected so far
   ConstraintManager constraints;
 
+  /// @brief Did we use our bitflip in this state?
+  bool bitflip;
+
   /// Statistics and information
 
   /// @brief Costs for all queries issued for this state, in seconds

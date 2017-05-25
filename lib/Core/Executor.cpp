@@ -1641,6 +1641,19 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
              "Wrong operand index!");
       ref<Expr> cond = eval(ki, 0, state).value;
       Executor::StatePair branches = fork(state, cond, false);
+      Executor::StatePair branchesBitflip;
+      bool doingBitflip = false;
+
+      // Can we use a bitflip?
+      if (!state.bitflip){
+          // Lets assume a bitflip
+          doingBitflip = true;
+          branchesBitflip = fork(state, Expr::createIsZero(cond), false);
+          if (branchesBitflip.first)
+              branchesBitflip.first->bitflip = true;
+          if (branchesBitflip.second)
+              branchesBitflip.second->bitflip = true;
+      }
 
       // NOTE: There is a hidden dependency here, markBranchVisited
       // requires that we still be in the context of the branch
@@ -1653,6 +1666,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         transferToBasicBlock(bi->getSuccessor(0), bi->getParent(), *branches.first);
       if (branches.second)
         transferToBasicBlock(bi->getSuccessor(1), bi->getParent(), *branches.second);
+
+      if (doingBitflip && branchesBitflip.first)
+          transferToBasicBlock(bi->getSuccessor(0), bi->getParent(), *branchesBitflip.first);
+      if (doingBitflip && branchesBitflip.second)
+          transferToBasicBlock(bi->getSuccessor(1), bi->getParent(), *branchesBitflip.second);
+
     }
     break;
   }
