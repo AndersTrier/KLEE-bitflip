@@ -32,6 +32,8 @@
 #include <set>
 #include <stdarg.h>
 
+#include <iostream>
+
 using namespace llvm;
 using namespace klee;
 
@@ -71,6 +73,7 @@ ExecutionState::ExecutionState(KFunction *kf) :
     prevPC(pc),
 
     bitflip(false),
+    doBitflip(false),
     queryCost(0.), 
     weight(1),
     depth(0),
@@ -109,6 +112,7 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     constraints(state.constraints),
 
     bitflip(state.bitflip),
+    doBitflip(state.bitflip),
     queryCost(state.queryCost),
     weight(state.weight),
     depth(state.depth),
@@ -190,6 +194,8 @@ llvm::raw_ostream &klee::operator<<(llvm::raw_ostream &os, const MemoryMap &mm) 
 }
 
 bool ExecutionState::merge(const ExecutionState &b) {
+  std::cout << "Merging!\n";
+
   if (DebugLogStateMerge)
     llvm::errs() << "-- attempting merge of A:" << this << " with B:" << &b
                  << "--\n";

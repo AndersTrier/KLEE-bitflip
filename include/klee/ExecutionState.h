@@ -100,6 +100,9 @@ public:
   /// @brief Did we use our bitflip in this state?
   bool bitflip;
 
+  /// @brief Should we do a bitflip on next branch?
+  bool doBitflip;
+
   /// Statistics and information
 
   /// @brief Costs for all queries issued for this state, in seconds

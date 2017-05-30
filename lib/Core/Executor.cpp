@@ -103,6 +103,7 @@
 #include <sstream>
 #include <vector>
 #include <string>
+#include <iostream>
 
 #include <sys/mman.h>
 
@@ -1640,19 +1641,32 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       assert(bi->getCondition() == bi->getOperand(0) &&
              "Wrong operand index!");
       ref<Expr> cond = eval(ki, 0, state).value;
-      Executor::StatePair branches = fork(state, cond, false);
-      Executor::StatePair branchesBitflip;
-      bool doingBitflip = false;
+      Executor::StatePair branches;
 
-      // Can we use a bitflip?
-      if (!state.bitflip){
-          // Lets assume a bitflip
-          doingBitflip = true;
-          branchesBitflip = fork(state, Expr::createIsZero(cond), false);
-          if (branchesBitflip.first)
-              branchesBitflip.first->bitflip = true;
-          if (branchesBitflip.second)
-              branchesBitflip.second->bitflip = true;
+      if (!state.doBitflip) {
+        std::cout << "Not doing bitflip\n";
+        // Force a fork, if we have not yet used the bitflip
+        if (!state.bitflip){
+          ExecutionState* flipState = state.branch();
+          flipState->pc = state.prevPC;
+          flipState->doBitflip = true;
+          addedStates.push_back(flipState);
+
+          state.ptreeNode->data = 0;
+          std::pair<PTree::Node*,PTree::Node*> res = 
+            processTree->split(state.ptreeNode, flipState, &state);
+          flipState->ptreeNode = res.first;
+          state.ptreeNode = res.second;
+        }
+        branches = fork(state, cond, false);
+      } else {
+        std::cout << "Doing a bitflip! For cond: ";
+        cond->dump();
+        std::cout << "\n";
+        state.doBitflip = false; // Do not trigger any more bitflips on this path
+        state.bitflip = true;
+        // Fork while assuming a bitflip
+        branches = fork(state, Expr::createIsZero(cond), false);
       }
 
       // NOTE: There is a hidden dependency here, markBranchVisited
@@ -1666,12 +1680,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         transferToBasicBlock(bi->getSuccessor(0), bi->getParent(), *branches.first);
       if (branches.second)
         transferToBasicBlock(bi->getSuccessor(1), bi->getParent(), *branches.second);
-
-      if (doingBitflip && branchesBitflip.first)
-          transferToBasicBlock(bi->getSuccessor(0), bi->getParent(), *branchesBitflip.first);
-      if (doingBitflip && branchesBitflip.second)
-          transferToBasicBlock(bi->getSuccessor(1), bi->getParent(), *branchesBitflip.second);
-
     }
     break;
   }
