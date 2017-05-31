@@ -1649,6 +1649,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         if (!state.bitflip){
           ExecutionState* flipState = state.branch();
           flipState->pc = state.prevPC;
+          flipState->flipPC = state.prevPC;
           flipState->doBitflip = true;
           addedStates.push_back(flipState);
 
@@ -1663,6 +1664,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         std::cout << "Doing a bitflip! For cond: ";
         cond->dump();
         std::cout << "\n";
+        state.flipBranch = bi;
         state.doBitflip = false; // Do not trigger any more bitflips on this path
         state.bitflip = true;
         // Fork while assuming a bitflip
@@ -3016,6 +3018,22 @@ void Executor::terminateStateOnError(ExecutionState &state,
     std::string MsgString;
     llvm::raw_string_ostream msg(MsgString);
     msg << "Error: " << message << "\n";
+
+    msg << "----------\n";
+    msg << "Bitflip used: ";
+    if (state.bitflip){
+      msg << "True \n";
+      if (state.flipPC->info->file != "") {
+        msg << "Bitflip in file: " << state.flipPC->info->file << "\n";
+        msg << "        at line: " << state.flipPC->info->line << "\n";
+        msg << "assembly.ll line: " << state.flipPC->info->assemblyLine << "\n";
+      }
+    } else {
+      msg << "False \n";
+    }
+    msg << "----------\n";
+
+    msg << "Assert located at:\n";
     if (ii.file != "") {
       msg << "File: " << ii.file << "\n";
       msg << "Line: " << ii.line << "\n";

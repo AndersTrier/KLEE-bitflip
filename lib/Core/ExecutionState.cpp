@@ -113,6 +113,9 @@ ExecutionState::ExecutionState(const ExecutionState& state):
 
     bitflip(state.bitflip),
     doBitflip(state.bitflip),
+    flipBranch(state.flipBranch),
+    flipPC(state.flipPC),
+
     queryCost(state.queryCost),
     weight(state.weight),
     depth(state.depth),

@@ -13,6 +13,7 @@
 #include "klee/Constraints.h"
 #include "klee/Expr.h"
 #include "klee/Internal/ADT/TreeStream.h"
+#include "llvm/IR/Instructions.h"
 
 // FIXME: We do not want to be exposing these? :(
 #include "../../lib/Core/AddressSpace.h"
@@ -102,6 +103,12 @@ public:
 
   /// @brief Should we do a bitflip on next branch?
   bool doBitflip;
+
+  /// @brief Flipped branch
+  llvm::BranchInst* flipBranch;
+
+  /// @brief The branch we flipped
+  KInstIterator flipPC;
 
   /// Statistics and information
 
