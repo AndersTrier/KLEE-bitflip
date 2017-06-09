@@ -1643,32 +1643,44 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> cond = eval(ki, 0, state).value;
       Executor::StatePair branches;
 
-      if (!state.doBitflip) {
-        std::cout << "Not doing bitflip\n";
-        // Force a fork, if we have not yet used the bitflip
-        if (!state.bitflip){
-          ExecutionState* flipState = state.branch();
-          flipState->pc = state.prevPC;
-          flipState->flipPC = state.prevPC;
-          flipState->doBitflip = true;
-          addedStates.push_back(flipState);
-
-          state.ptreeNode->data = 0;
-          std::pair<PTree::Node*,PTree::Node*> res = 
-            processTree->split(state.ptreeNode, flipState, &state);
-          flipState->ptreeNode = res.first;
-          state.ptreeNode = res.second;
-        }
-        branches = fork(state, cond, false);
-      } else {
-        std::cout << "Doing a bitflip! For cond: ";
-        cond->dump();
-        std::cout << "\n";
+      // Should we do a bitflip in this branch?
+      if (state.doBitflip) {
         state.flipBranch = bi;
         state.doBitflip = false; // Do not trigger any more bitflips on this path
         state.bitflip = true;
+
         // Fork while assuming a bitflip
         branches = fork(state, Expr::createIsZero(cond), false);
+      } else {
+        // Force a fork with the bitflip enabled, if we have not yet used the bitflip,
+        // and add this bitflip state to the collection of states.
+        if (!state.bitflip){
+          // Branch the original state
+          ExecutionState* flipState = state.branch();
+
+          // Split the PTreeNode as well
+          state.ptreeNode->data = 0;
+          std::pair<PTree::Node*,PTree::Node*> res =
+            processTree->split(state.ptreeNode, flipState, &state);
+          flipState->ptreeNode = res.first;
+          state.ptreeNode = res.second;
+
+          // Enable the bitflip, and set the program counter one back
+          flipState->doBitflip = true;
+          flipState->pc = state.prevPC;
+          flipState->flipPC = state.prevPC;
+          
+          // Add the state to the collection of states
+          addedStates.push_back(flipState);
+
+        }
+
+        // If we already did a bitflip in this branch, we should
+        // continue assume the bitflip
+        if (state.flipBranch == bi)
+          branches = fork(state, Expr::createIsZero(cond), false);
+        else
+          branches = fork(state, cond, false);
       }
 
       // NOTE: There is a hidden dependency here, markBranchVisited
@@ -3026,8 +3038,11 @@ void Executor::terminateStateOnError(ExecutionState &state,
       if (state.flipPC->info->file != "") {
         msg << "Bitflip in file: " << state.flipPC->info->file << "\n";
         msg << "        at line: " << state.flipPC->info->line << "\n";
-        msg << "assembly.ll line: " << state.flipPC->info->assemblyLine << "\n";
       }
+      msg << "assembly.ll line: " << state.flipPC->info->assemblyLine << "\n";
+      msg << "In conditiono: ";
+      state.flipBranch->getCondition()->print(msg); 
+      msg << "\n";
     } else {
       msg << "False \n";
     }
